@@ -5,6 +5,8 @@ auto-uploads new files in obs output directory to youtube VIA youtube api
 import os
 import time
 import pickle
+import requests
+import mimetypes
 from pathlib import Path
 from datetime import datetime
 
@@ -18,6 +20,7 @@ from google.auth.transport.requests import Request
 OUTPUT_PATH = Path(r'L:\OBS Outputs')
 CLIENT_SECRETS_FILE = 'client_secrets.json'
 TOKEN_CACHE_FILE = 'token.pickle'
+API_BASE = "http://localhost:3001"
 
 POLL_SECONDS = 10
 UPLOAD_PRIVACY = 'unlisted'
@@ -55,7 +58,7 @@ def get_authenticated_service(client_secrets_file: str, token_cache: str):
 
 def make_title():
     # DDMMYYYYHHMM -> ex: 300120261601
-    return input('title: ')
+    return datetime.now().strftime('%d%m%Y%H%M')
 
 
 def wait_until_file_stable(path: Path, checks: int, interval: int):
@@ -90,7 +93,7 @@ def find_remuxed_mp4(mkv_path: Path) -> Path | None:
 
     return None
 
-
+# ignore for now
 def upload_to_youtube(youtube, video_file: Path, title: str, description: str, privacy: str):
     body = {
         'snippet': {
@@ -120,14 +123,25 @@ def upload_to_youtube(youtube, video_file: Path, title: str, description: str, p
 
     return response
 
+def upload_to_backend(video_file: Path, title: str):
+    url = f"{API_BASE}/videos"
+    mime = mimetypes.guess_type(str(video_file))[0] or "application/octet-stream"
+    with open(video_file, "rb") as f:
+        files = {"file": (video_file.name, f, mime)}
+        data = {"title": title}
+        resp = requests.post(url, files=files, data=data, timeout=(10, 3600))
+        resp.raise_for_status()
+        return resp.json()
 
 def main():
     if not OUTPUT_PATH.exists():
         raise FileNotFoundError(f'OUTPUT_PATH does not exist: {OUTPUT_PATH}')
 
-    print('Authenticating with YouTube...')
-    youtube = get_authenticated_service(CLIENT_SECRETS_FILE, TOKEN_CACHE_FILE)
-    print('Authenticated.\n')
+    # IGNORE FOR NOW
+
+    #print('Authenticating with YouTube...')
+    #youtube = get_authenticated_service(CLIENT_SECRETS_FILE, TOKEN_CACHE_FILE)
+    #print('Authenticated.\n')
 
     seen = set(p.name for p in OUTPUT_PATH.glob('*') if p.suffix.lower() in {'.mp4', '.mkv'})
     print(f'Watching folder: {OUTPUT_PATH}')
@@ -164,14 +178,8 @@ def main():
                 print(f'Title: {title}')
 
                 try:
-                    result = upload_to_youtube(
-                        youtube,
-                        video_file=upload_path,
-                        title=title,
-                        description=UPLOAD_DESCRIPTION,
-                        privacy=UPLOAD_PRIVACY,
-                    )
-                    print(f'Upload complete! Video ID: {result.get('id')}\n')
+                    result = upload_to_backend(upload_path, title)
+                    print(f"Upload complete! Video ID: {result.get('id')}\n")
 
                     seen.add(filename)
                     seen.add(upload_path.name)
@@ -179,10 +187,10 @@ def main():
                     seen.add(path.with_suffix('.mp4').name)
                     seen.add(path.with_suffix('.mkv').name)
 
-                except HttpError as e:
-                    print('YouTube upload failed (HttpError):')
+                except requests.exceptions.RequestException as e:
+                    print("Backend upload failed:")
                     print(e)
-                    print('Will NOT mark as seen; will retry next scan.\n')
+                    print("Will NOT mark as seen; will retry next scan.\n")
 
             time.sleep(POLL_SECONDS)
 
