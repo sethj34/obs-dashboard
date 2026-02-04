@@ -3,12 +3,11 @@
 }
 
 .list {
-    border: 1px solid pink !important;
     border-bottom-right-radius: 5%;
     width: 30vw;
     height: 99.7vh;
     background-color: rgb(36, 36, 36);
-    position: sticky;
+    overflow: scroll;
 }
 
 .video {
