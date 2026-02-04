@@ -30,7 +30,6 @@ export default function Videos() {
                     <>
                         <div className="item-header-items">
                             <h2 className="video-title-big">{selected.title}</h2>
-                            <p className="video-date-big">{new Date(selected.createdAt).toLocaleString()}</p>
                             <button className="close-display" onClick={() => setSelected(null)}>X</button>
                         </div>
                         <video

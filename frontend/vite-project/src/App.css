@@ -44,15 +44,15 @@
     height: 50px;
     border-radius: 50%;
     background-color: rgba(255, 255, 255, 0.3);
-    color: black;
+    color: white;
     align-self: flex-end;
-    margin: 3vh 0 3vh 19%;
+    margin: 3vh 0 3vh 20%;
 }
 
 .item-header-items {
     display: flex;
-    height: 10vh
 }
+
 
 .select-video {
     position: absolute;
