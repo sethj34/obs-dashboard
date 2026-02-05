@@ -12,6 +12,7 @@
 
 .video {
     width: 70vw;
+    margin-left: 2%;
 }
 
 .video-title-small {
@@ -70,4 +71,8 @@
 .video-date-big {
     margin: 0;
     height: 5px;
+}
+
+.action-button {
+    margin: 2px 0 0 2%;
 }
