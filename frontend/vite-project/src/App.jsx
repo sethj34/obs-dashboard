@@ -9,7 +9,6 @@ async function uploadToYoutube(selected) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ privacy: "unlisted" }),
   });
-
   const out = await res.json();
   console.log(out);
 }
