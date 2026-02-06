@@ -1,60 +1,20 @@
-'''
-auto-uploads new files in obs output directory to youtube VIA youtube api
-'''
-
 import os
 import time
-import pickle
 import requests
 import mimetypes
 from pathlib import Path
 from datetime import datetime
 
-from googleapiclient.discovery import build
-from googleapiclient.http import MediaFileUpload
-from googleapiclient.errors import HttpError
-from google_auth_oauthlib.flow import InstalledAppFlow
-from google.auth.transport.requests import Request
-
-
 OUTPUT_PATH = Path(r'L:\OBS Outputs')
-CLIENT_SECRETS_FILE = 'client_secrets.json'
-TOKEN_CACHE_FILE = 'token.pickle'
 API_BASE = "http://localhost:3001"
 
 POLL_SECONDS = 10
-UPLOAD_PRIVACY = 'private'
-UPLOAD_DESCRIPTION = ''
-UPLOAD_CATEGORY_ID = '22'
 
 STABILITY_CHECKS = 3
 STABILITY_INTERVAL = 2
 
 REMUX_GRACE_SECONDS = 180
 REMUX_POLL_INTERVAL = 2
-
-SCOPES = ['https://www.googleapis.com/auth/youtube.upload']
-
-
-def get_authenticated_service(client_secrets_file: str, token_cache: str):
-    creds = None
-
-    if os.path.exists(token_cache):
-        with open(token_cache, 'rb') as f:
-            creds = pickle.load(f)
-
-    if not creds or not creds.valid:
-        if creds and creds.expired and creds.refresh_token:
-            creds.refresh(Request())
-        else:
-            flow = InstalledAppFlow.from_client_secrets_file(client_secrets_file, SCOPES)
-            creds = flow.run_local_server(port=0)
-
-        with open(token_cache, 'wb') as f:
-            pickle.dump(creds, f)
-
-    return build('youtube', 'v3', credentials=creds)
-
 
 def make_title():
     # DDMMYYYYHHMM -> ex: 300120261601
@@ -90,38 +50,7 @@ def find_remuxed_mp4(mkv_path: Path) -> Path | None:
             return target_mp4
 
         time.sleep(REMUX_POLL_INTERVAL)
-
     return None
-
-# ignore for now
-def upload_to_youtube(youtube, video_file: Path, title: str, description: str, privacy: str):
-    body = {
-        'snippet': {
-            'title': title,
-            'description': description,
-            'categoryId': UPLOAD_CATEGORY_ID,
-        },
-        'status': {
-            'privacyStatus': privacy,
-            'selfDeclaredMadeForKids': False,
-        },
-    }
-
-    media = MediaFileUpload(str(video_file), resumable=True)
-
-    request = youtube.videos().insert(
-        part='snippet,status',
-        body=body,
-        media_body=media,
-    )
-
-    response = None
-    while response is None:
-        status, response = request.next_chunk()
-        if status:
-            print(f'Upload progress: {int(status.progress() * 100)}%')
-
-    return response
 
 def upload_to_backend(video_file: Path, title: str):
     url = f"{API_BASE}/videos"
@@ -136,12 +65,6 @@ def upload_to_backend(video_file: Path, title: str):
 def main():
     if not OUTPUT_PATH.exists():
         raise FileNotFoundError(f'OUTPUT_PATH does not exist: {OUTPUT_PATH}')
-
-    # IGNORE FOR NOW
-
-    #print('Authenticating with YouTube...')
-    #youtube = get_authenticated_service(CLIENT_SECRETS_FILE, TOKEN_CACHE_FILE)
-    #print('Authenticated.\n')
 
     seen = set(p.name for p in OUTPUT_PATH.glob('*') if p.suffix.lower() in {'.mp4', '.mkv'})
     print(f'Watching folder: {OUTPUT_PATH}')
